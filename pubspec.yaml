@@ -1,0 +1,19 @@
+name: frame_flutter_ticker
+description: "Subscribes to a Finnhub.io ticker symbol using WebSockets and pushes updates to Frame display"
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.3.3 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
