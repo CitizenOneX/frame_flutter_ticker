@@ -105,6 +105,7 @@ mixin SimpleFrameAppState<T extends StatefulWidget> on State<T> {
     } catch (e) {
       currentState = ApplicationState.disconnected;
       _log.fine('Error while connecting and/or discovering services: $e');
+      if (mounted) setState(() {});
     }
   }
 
@@ -112,6 +113,9 @@ mixin SimpleFrameAppState<T extends StatefulWidget> on State<T> {
     if (connectedDevice != null) {
       try {
         _log.fine('connecting to existing device: $connectedDevice');
+        // TODO get the BrilliantDevice return value from the reconnect call?
+        // TODO am I getting duplicate devices/subscriptions?
+        // Rather than fromUuid(), can I just call connectedDevice.device.connect() myself?
         await BrilliantBluetooth.reconnect(connectedDevice!.uuid);
         _log.fine('device connected: $connectedDevice');
 
