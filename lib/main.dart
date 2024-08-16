@@ -29,7 +29,7 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
   String _tickerText = '';
 
   MainAppState() {
-    Logger.root.level = Level.ALL;
+    Logger.root.level = Level.INFO;
     Logger.root.onRecord.listen((record) {
       debugPrint('${record.level.name}: ${record.time}: ${record.message}');
     });
@@ -38,8 +38,7 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
   }
 
   /// subscribe to a ticker feed for the user's selected ticker using their API token
-  @override
-  Future<void> runApplication() async {
+  Future<void> run() async {
     currentState = ApplicationState.running;
     if (mounted) setState(() {});
 
@@ -63,9 +62,9 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
         while (currentState == ApplicationState.running) {
           // only update the frame display if the ticker value has changed
           if (_tickerText != prevTickerText) {
-            await FrameHelper.writeText(connectedDevice!, _tickerText);
+            await FrameHelper.writeText(frame!, _tickerText);
             await Future.delayed(const Duration(milliseconds: 100));
-            await FrameHelper.show(connectedDevice!);
+            await FrameHelper.show(frame!);
             prevTickerText = _tickerText;
           }
           await Future.delayed(const Duration(milliseconds: 2000));
@@ -73,7 +72,7 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
 
         // when canceled, close websocket and clear the display
         _channel?.sink.close();
-        FrameHelper.clear(connectedDevice!);
+        FrameHelper.clear(frame!);
       }
     } catch (e) {
       _log.fine('Error executing application logic: $e');
@@ -83,9 +82,8 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
     if (mounted) setState(() {});
   }
 
-  @override
-  Future<void> stopApplication() async {
-    currentState = ApplicationState.stopping;
+  Future<void> cancel() async {
+    currentState = ApplicationState.ready;
     if (mounted) setState(() {});
   }
 
@@ -110,30 +108,36 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
 
     switch (currentState) {
       case ApplicationState.disconnected:
-        pfb.add(TextButton(onPressed: scanOrReconnectFrame, child: const Text('Connect Frame')));
-        pfb.add(const TextButton(onPressed: null, child: Text('Start Ticker')));
-        pfb.add(const TextButton(onPressed: null, child: Text('Finish')));
+        pfb.add(TextButton(onPressed: scanOrReconnectFrame, child: const Text('Connect')));
+        pfb.add(const TextButton(onPressed: null, child: Text('Start')));
+        pfb.add(const TextButton(onPressed: null, child: Text('Stop')));
+        pfb.add(const TextButton(onPressed: null, child: Text('Disconnect')));
         break;
 
+      case ApplicationState.initializing:
       case ApplicationState.scanning:
       case ApplicationState.connecting:
+      case ApplicationState.running:
       case ApplicationState.stopping:
       case ApplicationState.disconnecting:
-        pfb.add(const TextButton(onPressed: null, child: Text('Connect Frame')));
-        pfb.add(const TextButton(onPressed: null, child: Text('Start Ticker')));
-        pfb.add(const TextButton(onPressed: null, child: Text('Finish')));
+        pfb.add(const TextButton(onPressed: null, child: Text('Connect')));
+        pfb.add(const TextButton(onPressed: null, child: Text('Start')));
+        pfb.add(const TextButton(onPressed: null, child: Text('Stop')));
+        pfb.add(const TextButton(onPressed: null, child: Text('Disconnect')));
+        break;
+
+      case ApplicationState.connected:
+        pfb.add(const TextButton(onPressed: null, child: Text('Connect')));
+        pfb.add(TextButton(onPressed: startApplication, child: const Text('Start')));
+        pfb.add(const TextButton(onPressed: null, child: Text('Stop')));
+        pfb.add(TextButton(onPressed: disconnectFrame, child: const Text('Disconnect')));
         break;
 
       case ApplicationState.ready:
-        pfb.add(const TextButton(onPressed: null, child: Text('Connect Frame')));
-        pfb.add(TextButton(onPressed: runApplication, child: const Text('Start Ticker')));
-        pfb.add(TextButton(onPressed: disconnectFrame, child: const Text('Finish')));
-        break;
-
-      case ApplicationState.running:
-        pfb.add(const TextButton(onPressed: null, child: Text('Connect Frame')));
-        pfb.add(TextButton(onPressed: stopApplication, child: const Text('Stop Ticker')));
-        pfb.add(const TextButton(onPressed: null, child: Text('Finish')));
+        pfb.add(const TextButton(onPressed: null, child: Text('Connect')));
+        pfb.add(const TextButton(onPressed: null, child: Text('Start')));
+        pfb.add(TextButton(onPressed: stopApplication, child: const Text('Stop')));
+        pfb.add(const TextButton(onPressed: null, child: Text('Disconnect')));
         break;
     }
 
@@ -180,6 +184,11 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
             ),
           )
         ),
+        floatingActionButton:
+          currentState == ApplicationState.ready ?
+            FloatingActionButton(onPressed: run, child: const Icon(Icons.auto_graph)) :
+          currentState == ApplicationState.running ?
+          FloatingActionButton(onPressed: cancel, child: const Icon(Icons.cancel)) : null,
         persistentFooterButtons: pfb,
       ),
     );
