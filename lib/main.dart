@@ -110,6 +110,7 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
       home: Scaffold(
         appBar: AppBar(
           title: const Text("Frame Flutter Ticker"),
+          actions: [getBatteryWidget()]
         ),
         body: Center(
           child: Container(
