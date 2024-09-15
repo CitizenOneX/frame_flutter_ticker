@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:simple_frame_app/frame_helper.dart';
 import 'package:simple_frame_app/simple_frame_app.dart';
 
 void main() => runApp(const MainApp());
@@ -61,9 +60,7 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
         while (currentState == ApplicationState.running) {
           // only update the frame display if the ticker value has changed
           if (_tickerText != prevTickerText) {
-            await FrameHelper.writeText(frame!, _tickerText);
-            await Future.delayed(const Duration(milliseconds: 150));
-            await FrameHelper.show(frame!);
+            await frame!.sendString('frame.display.text("$_tickerText",1,1) frame.display.show()');
             prevTickerText = _tickerText;
           }
 
@@ -72,7 +69,7 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
 
         // when canceled, close websocket and clear the display
         _channel?.sink.close();
-        FrameHelper.clear(frame!);
+        frame!.clearDisplay();
       }
     } catch (e) {
       _log.fine('Error executing application logic: $e');
