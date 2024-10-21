@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_frame_app/simple_frame_app.dart';
 
 void main() => runApp(const MainApp());
@@ -23,8 +24,8 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
   WebSocketChannel? _channel;
 
   // ticker subscription details
-  final TextEditingController _tokenController = TextEditingController.fromValue(const TextEditingValue(text: 'put your free Finnhub token here'));
-  final TextEditingController _symbolController = TextEditingController.fromValue(const TextEditingValue(text: 'BINANCE:BTCUSDT'));
+  final TextEditingController _tokenController = TextEditingController();
+  final TextEditingController _symbolController = TextEditingController();
   String _tickerText = '';
 
   MainAppState() {
@@ -60,7 +61,7 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
         while (currentState == ApplicationState.running) {
           // only update the frame display if the ticker value has changed
           if (_tickerText != prevTickerText) {
-            await frame!.sendString('frame.display.text("$_tickerText",1,1) frame.display.show()');
+            await frame!.sendString('frame.display.text("$_tickerText",1,1) frame.display.show() print(0)');
             prevTickerText = _tickerText;
           }
 
@@ -72,7 +73,7 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
         frame!.clearDisplay();
       }
     } catch (e) {
-      _log.fine('Error executing application logic: $e');
+      _log.warning('Error executing application logic: $e');
     }
 
     currentState = ApplicationState.ready;
@@ -92,6 +93,13 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
   }
 
   @override
+  void initState() {
+    super.initState();
+
+    _loadPrefs();
+  }
+
+  @override
   void dispose() {
     _channel?.sink.close();
     _tokenController.dispose();
@@ -99,15 +107,28 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
     super.dispose();
   }
 
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _tokenController.text = prefs.getString('finnhub_token') ?? '';
+      _symbolController.text = prefs.getString('symbol') ?? 'BINANCE:BTCUSDT';
+    });
+  }
+
+  Future<void> _savePrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('finnhub_token', _tokenController.text);
+    await prefs.setString('symbol', _symbolController.text);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Frame Flutter Ticker',
+      title: 'Frame Ticker',
       theme: ThemeData.dark(),
       home: Scaffold(
         appBar: AppBar(
-          title: const Text("Frame Flutter Ticker"),
-          actions: [getBatteryWidget()]
+          title: const Text("Frame Ticker"),
         ),
         body: Center(
           child: Container(
@@ -115,15 +136,12 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
             child: Column(
               children: <Widget>[
                 // Finnhub.io subscription
-                Form(child: TextFormField(controller: _tokenController,
-                    decoration: const InputDecoration(labelText: 'Finnhub free access token:')),
-                ),
+                TextField(controller: _tokenController, obscureText: true, decoration: const InputDecoration(hintText: 'Enter Finnhub free access token'),),
                 const SizedBox(height: 24),
                 // Finnhub ticker symbol
-                Form(child: TextFormField(controller: _symbolController,
-                    decoration: const InputDecoration(labelText: 'Ticker Symbol to Subscribe to:')),
-                ),
+                TextField(controller: _symbolController, obscureText: false, decoration: const InputDecoration(hintText: 'Enter Ticker Symbol to Subscribe to'),),
                 const SizedBox(height: 24),
+                ElevatedButton(onPressed: _savePrefs, child: const Text('Save')),
 
                 if (_channel != null)
                   StreamBuilder(
