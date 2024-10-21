@@ -27,6 +27,7 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
   final TextEditingController _tokenController = TextEditingController();
   final TextEditingController _symbolController = TextEditingController();
   String _tickerText = '';
+  String? _errorMsg;
 
   MainAppState() {
     Logger.root.level = Level.INFO;
@@ -38,6 +39,7 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
   /// subscribe to a ticker feed for the user's selected ticker using their API token
   @override
   Future<void> run() async {
+    _errorMsg = null;
     currentState = ApplicationState.running;
     if (mounted) setState(() {});
 
@@ -73,7 +75,8 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
         frame!.clearDisplay();
       }
     } catch (e) {
-      _log.warning('Error executing application logic: $e');
+      _errorMsg = 'Error executing application logic: $e';
+      _log.warning(_errorMsg);
     }
 
     currentState = ApplicationState.ready;
@@ -141,6 +144,7 @@ class MainAppState extends State<MainApp> with SimpleFrameAppState {
                 // Finnhub ticker symbol
                 TextField(controller: _symbolController, obscureText: false, decoration: const InputDecoration(hintText: 'Enter Ticker Symbol to Subscribe to'),),
                 const SizedBox(height: 24),
+                if (_errorMsg != null) Text(_errorMsg!, style: const TextStyle(backgroundColor: Colors.red)),
                 ElevatedButton(onPressed: _savePrefs, child: const Text('Save')),
 
                 if (_channel != null)
